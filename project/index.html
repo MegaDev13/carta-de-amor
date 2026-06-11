@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Uma Carta Para Você</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Dancing+Script:wght@400;600&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+  <style>
+    /* ======= RESET & ROOT ======= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:        #1a1410;
+      --ink-light:  #3a2e26;
+      --parchment:  #0d0a08;
+      --gold:       #c8a96e;
+      --gold-dim:   #8a6e44;
+      --cream:      #f0e6d4;
+      --cream-dim:  #c8b89a;
+      --blush:      #c97a7a;
+      --font-hand:  'Dancing Script', cursive;
+      --font-serif: 'Cormorant Garamond', Georgia, serif;
+      --font-body:  'Inter', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--parchment);
+      color: var(--cream);
+      font-family: var(--font-serif);
+      overflow-x: hidden;
+      cursor: default;
+    }
+
+    /* ======= GRAIN OVERLAY ======= */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+    }
+
+    /* ======= PARTICLES ======= */
+    #particles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      background: var(--gold);
+      opacity: 0;
+      animation: drift linear infinite;
+    }
+
+    @keyframes drift {
+      0%   { transform: translateY(100vh) translateX(0) scale(0); opacity: 0; }
+      10%  { opacity: 0.4; }
+      90%  { opacity: 0.2; }
+      100% { transform: translateY(-10vh) translateX(40px) scale(1); opacity: 0; }
+    }
+
+    /* ======= INTRO SCREEN ======= */
+    #intro {
+      position: fixed;
+      inset: 0;
+      z-index: 900;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--parchment);
+      transition: opacity 1.2s ease, visibility 1.2s ease;
+    }
+
+    #intro.hidden { opacity: 0; visibility: hidden; }
+
+    #intro .envelope-icon {
+      font-size: 4rem;
+      margin-bottom: 2rem;
+      animation: pulse 2.5s ease-in-out infinite;
+      filter: drop-shadow(0 0 20px rgba(200,169,110,0.4));
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    #intro h1 {
+      font-family: var(--font-hand);
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      color: var(--gold);
+      letter-spacing: 0.02em;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    #intro p {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: clamp(1rem, 2.5vw, 1.3rem);
+      color: var(--cream-dim);
+      margin-bottom: 3rem;
+      text-align: center;
+    }
+
+    #begin-btn {
+      font-family: var(--font-hand);
+      font-size: 1.4rem;
+      color: var(--parchment);
+      background: var(--gold);
+      border: none;
+      padding: 0.9rem 3rem;
+      border-radius: 50px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 30px rgba(200,169,110,0.3);
+    }
+
+    #begin-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px rgba(200,169,110,0.5);
+    }
+
+    /* ======= SCROLL CONTAINER ======= */
+    #letter {
+      position: relative;
+      z-index: 2;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    /* ======= CHAPTER SECTIONS ======= */
+    .chapter {
+      min-height: 80vh;
+      padding: 8vh 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ======= TEXT REVEAL ======= */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 1s ease, transform 1s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ======= OPENING LETTER ======= */
+    #opening {
+      min-height: 100vh;
+      padding: 15vh 0 10vh;
+    }
+
+    .letter-paper {
+      background: linear-gradient(160deg, rgba(240,230,212,0.04) 0%, rgba(200,169,110,0.02) 100%);
+      border: 1px solid rgba(200,169,110,0.12);
+      border-radius: 2px;
+      padding: clamp(2rem, 5vw, 4rem);
+      position: relative;
+      width: 100%;
+    }
+
+    .letter-paper::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 3rem;
+      width: 1px;
+      height: 100%;
+      background: rgba(200,169,110,0.08);
+    }
+
+    .letter-greeting {
+      font-family: var(--font-hand);
+      font-size: clamp(2.5rem, 7vw, 4rem);
+      color: var(--gold);
+      margin-bottom: 2.5rem;
+      display: block;
+    }
+
+    .letter-body p {
+      font-family: var(--font-serif);
+      font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+      line-height: 1.95;
+      color: var(--cream);
+      margin-bottom: 1.4em;
+      font-weight: 300;
+    }
+
+    .letter-body p.highlight {
+      font-size: clamp(1.4rem, 3.5vw, 1.9rem);
+      color: var(--gold);
+      font-style: italic;
+      text-align: center;
+      margin: 2rem 0;
+      line-height: 1.6;
+    }
+
+    .letter-body p.fan {
+      font-family: var(--font-hand);
+      font-size: clamp(1.2rem, 3vw, 1.7rem);
+      color: var(--cream-dim);
+      line-height: 1.8;
+    }
+
+    /* ======= CHAPTER HEADING ======= */
+    .chapter-intro {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: clamp(1.2rem, 3vw, 1.7rem);
+      color: var(--cream-dim);
+      text-align: center;
+      margin-bottom: 3rem;
+      line-height: 1.7;
+    }
+
+    /* ======= MEMORY IMAGES ======= */
+    .memory-single {
+      width: 100%;
+      max-width: 380px;
+      position: relative;
+      margin: 0 auto;
+    }
+
+    .memory-single img {
+      width: 100%;
+      border-radius: 2px;
+      box-shadow: 0 20px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(200,169,110,0.15);
+      display: block;
+      opacity: 0;
+      transform: scale(0.95);
+      transition: opacity 1.2s ease, transform 1.2s ease;
+    }
+
+    .memory-single.visible img {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .memory-single .glow {
+      position: absolute;
+      inset: -20px;
+      background: radial-gradient(ellipse at center, rgba(200,169,110,0.15) 0%, transparent 70%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+
+    .memory-single.visible .glow { opacity: 1; }
+
+    /* ======= VIDEO SECTION ======= */
+    .video-frame {
+      width: 100%;
+      position: relative;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 30px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(200,169,110,0.1);
+    }
+
+    .video-frame video {
+      width: 100%;
+      display: block;
+      border-radius: 4px;
+    }
+
+    .video-ambient {
+      position: absolute;
+      inset: -30px;
+      background: radial-gradient(ellipse at center, rgba(200,169,110,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* ======= SCRAPBOOK (prints 2-5) ======= */
+    .scrapbook {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .scrap-item {
+      position: relative;
+      opacity: 0;
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .scrap-item:nth-child(1) { transform: rotate(-2deg) translateY(20px); }
+    .scrap-item:nth-child(2) { transform: rotate(1.5deg) translateY(20px); }
+    .scrap-item:nth-child(3) { transform: rotate(-1deg) translateY(20px); grid-column: 1; }
+    .scrap-item:nth-child(4) { transform: rotate(2deg) translateY(20px); }
+
+    .scrapbook.visible .scrap-item {
+      opacity: 1;
+    }
+
+    .scrapbook.visible .scrap-item:nth-child(1) {
+      transform: rotate(-2deg) translateY(0);
+      transition-delay: 0s;
+    }
+    .scrapbook.visible .scrap-item:nth-child(2) {
+      transform: rotate(1.5deg) translateY(0);
+      transition-delay: 0.15s;
+    }
+    .scrapbook.visible .scrap-item:nth-child(3) {
+      transform: rotate(-1deg) translateY(0);
+      transition-delay: 0.3s;
+    }
+    .scrapbook.visible .scrap-item:nth-child(4) {
+      transform: rotate(2deg) translateY(0);
+      transition-delay: 0.45s;
+    }
+
+    .scrap-item img {
+      width: 100%;
+      max-height: 320px;
+      object-fit: cover;
+      object-position: top;
+      border-radius: 2px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(200,169,110,0.1);
+    }
+
+    /* ======= FULLSCREEN TYPOGRAPHY ======= */
+    .cinema-text {
+      text-align: center;
+      padding: 6vh 0;
+    }
+
+    .cinema-text p {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: clamp(1.6rem, 4.5vw, 2.8rem);
+      color: var(--cream);
+      line-height: 1.6;
+      margin-bottom: 1em;
+      font-weight: 300;
+    }
+
+    .cinema-text p.golden {
+      color: var(--gold);
+      font-size: clamp(2rem, 5.5vw, 3.5rem);
+    }
+
+    /* ======= GALLERY ======= */
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.8rem;
+      width: 100%;
+    }
+
+    .gallery-item {
+      overflow: hidden;
+      border-radius: 2px;
+      aspect-ratio: 3/4;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.9s ease, transform 0.9s ease;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    }
+
+    .gallery-item:nth-child(1) { transition-delay: 0s; }
+    .gallery-item:nth-child(2) { transition-delay: 0.1s; }
+    .gallery-item:nth-child(3) { transition-delay: 0.2s; }
+    .gallery-item:nth-child(4) { transition-delay: 0.3s; aspect-ratio: 4/3; grid-column: 1 / span 2; }
+    .gallery-item:nth-child(5) { transition-delay: 0.4s; grid-row: 2; grid-column: 3; aspect-ratio: auto; }
+    .gallery-item:nth-child(6) { transition-delay: 0.5s; grid-column: 1 / span 3; aspect-ratio: 16/7; }
+
+    .gallery.visible .gallery-item {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.6s ease;
+    }
+
+    .gallery-item:hover img { transform: scale(1.04); }
+
+    /* ======= CACAU REVEAL ======= */
+    .cacau-name {
+      font-family: var(--font-hand);
+      font-size: clamp(3rem, 10vw, 6rem);
+      color: var(--gold);
+      text-align: center;
+      opacity: 0;
+      transform: scale(0.8);
+      transition: opacity 1.5s ease, transform 1.5s ease;
+      text-shadow: 0 0 60px rgba(200,169,110,0.4);
+      filter: drop-shadow(0 0 30px rgba(200,169,110,0.3));
+    }
+
+    .cacau-name.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* ======= SLOW SECTION ======= */
+    .slow-text p {
+      font-family: var(--font-serif);
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      color: var(--cream-dim);
+      text-align: center;
+      line-height: 1.9;
+      margin-bottom: 3.5rem;
+      font-style: italic;
+      font-weight: 300;
+    }
+
+
+    /* ======= SIGNATURE ======= */
+    #signature {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      padding: 10vh 0;
+    }
+
+    .sig-line {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+      color: var(--cream);
+      text-align: center;
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+
+    .sig-line.visible { opacity: 1; }
+
+    .sig-name {
+      font-family: var(--font-hand);
+      font-size: clamp(2.5rem, 8vw, 5rem);
+      color: var(--gold);
+      text-align: center;
+      opacity: 0;
+      transition: opacity 2s ease;
+      filter: drop-shadow(0 0 30px rgba(200,169,110,0.3));
+    }
+
+    .sig-name.visible { opacity: 1; }
+
+    .sig-love {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: clamp(1.6rem, 4vw, 2.5rem);
+      color: var(--cream);
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+
+    .sig-love.visible { opacity: 1; }
+
+    /* ======= DIVIDER ======= */
+    .divider {
+      width: 80px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+      margin: 3rem auto;
+      opacity: 0.4;
+    }
+
+    /* ======= FADE TO BLACK ======= */
+    #fade-out {
+      position: fixed;
+      inset: 0;
+      z-index: 800;
+      background: var(--parchment);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 3s ease;
+    }
+
+    #fade-out.active { opacity: 1; }
+
+    /* ======= FOTOS PERFEITAS ======= */
+    .fotos-perfeitas {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      width: 100%;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .foto-perfeita {
+      position: relative;
+      overflow: hidden;
+      border-radius: 3px;
+      opacity: 0;
+      transform: translateY(24px) scale(0.97);
+      transition: opacity 1s ease, transform 1s ease;
+      box-shadow: 0 12px 50px rgba(0,0,0,0.65), 0 0 0 1px rgba(200,169,110,0.12);
+    }
+
+    .foto-perfeita:nth-child(1) { transition-delay: 0s; }
+    .foto-perfeita:nth-child(2) { transition-delay: 0.15s; }
+    .foto-perfeita:nth-child(3) { transition-delay: 0.3s; }
+    .foto-perfeita:nth-child(4) { transition-delay: 0.45s; }
+
+    .fotos-perfeitas.visible .foto-perfeita {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .foto-perfeita img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      aspect-ratio: 3/4;
+      transition: transform 0.6s ease;
+    }
+
+    .foto-perfeita:hover img { transform: scale(1.04); }
+
+    .foto-perfeita::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(13,10,8,0.25) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      .fotos-perfeitas { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    }
+
+    /* ======= SCROLLBAR ======= */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+
+    /* ======= MOBILE ======= */
+    @media (max-width: 600px) {
+      .scrapbook { grid-template-columns: 1fr; }
+      .scrap-item { transform: none !important; }
+      .gallery { grid-template-columns: 1fr 1fr; }
+      .gallery-item:nth-child(4) { grid-column: 1 / span 2; }
+      .gallery-item:nth-child(5) { grid-column: auto; grid-row: auto; }
+      .gallery-item:nth-child(6) { grid-column: 1 / span 2; aspect-ratio: 4/3; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reveal, .memory-single img, .gallery-item, .scrap-item, .cacau-name,
+      .sig-line, .sig-name, .sig-love {
+        transition: opacity 0.3s ease !important;
+        transform: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Particles -->
+  <div id="particles"></div>
+
+  <!-- Intro Screen -->
+  <div id="intro">
+    <div class="envelope-icon">💌</div>
+    <h1>Uma carta para você</h1>
+    <p>Feita com todo o meu coração</p>
+    <button id="begin-btn">Abrir a carta</button>
+  </div>
+
+  <!-- Fade to black -->
+  <div id="fade-out"></div>
+
+  <!-- Letter -->
+  <main id="letter">
+
+    <!-- ===== OPENING ===== -->
+    <section id="opening" class="chapter">
+      <div class="letter-paper reveal">
+        <span class="letter-greeting">Oi</span>
+        <div class="letter-body">
+          <p>Sempre começamos assim, é engraçado que só com isso é o suficiente pra eu me sentir perto de você, duas letrinhas.</p>
+          <p>Nem sempre é fácil aturar outra pessoa, mas com você é muito fácil, parece que eu nem me importo, poderia te escutar por dias inteiros conversando sem ligar pro tempo.</p>
+          <p>Acho que tô falando demais para o que eu quero dizer.</p>
+          <p class="highlight">Eu te amo.</p>
+          <p class="fan">Sou seu maior fã.<br>
+          Fã das suas brincadeiras. Do seu sorriso lindo. Da sua inteligência.</p>
+          <p>Eu ainda processo até hoje como fui tão sortudo de ter você comigo.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ===== CHAPTER 1 ===== -->
+    <section class="chapter">
+      <p class="chapter-intro reveal">E pensar que tudo isso começou com uma mensagem arriscada, né?</p>
+      <div class="memory-single reveal" id="mem1">
+        <div class="glow"></div>
+        <img src="images/print1.jpg" alt="A primeira mensagem" loading="lazy" />
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ===== CHAPTER 2 ===== -->
+    <section class="chapter">
+      <p class="chapter-intro reveal">E no fim acabou nisso:</p>
+      <div class="video-frame reveal" style="position:relative;">
+        <div class="video-ambient"></div>
+        <video id="video1" src="videos/video1.mp4" controls preload="metadata" playsinline></video>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ===== CHAPTER 3 ===== -->
+    <section class="chapter" style="gap:2rem;">
+      <p class="chapter-intro reveal">Claro que não foi fácil.</p>
+      <p class="chapter-intro reveal" style="margin-bottom:0;">Teve flertes tipo esse aqui que me fazem querer enterrar a cara num tanto de caco de vidro. 😬</p>
+
+      <div class="scrapbook" id="scrapbook">
+        <div class="scrap-item"><img src="images/print2.jpg" alt="Flerte 1" loading="lazy" /></div>
+        <div class="scrap-item"><img src="images/print3.jpg" alt="Flerte 2" loading="lazy" /></div>
+        <div class="scrap-item"><img src="images/print4.jpg" alt="Flerte 3" loading="lazy" /></div>
+        <div class="scrap-item"><img src="images/print5.jpg" alt="Flerte 4" loading="lazy" /></div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ===== CHAPTER 4 ===== -->
+    <section class="chapter">
+      <div class="cinema-text">
+        <p class="reveal">Mas tudo isso compensou.</p>
+        <p class="reveal golden">Porque com você eu tô aprendendo a viver.</p>
+        <p class="reveal">E tenho vivido um sonho.</p>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ===== CHAPTER 5 ===== -->
+    <section class="chapter" style="gap:2rem;">
+      <div class="gallery" id="gallery">
+        <div class="gallery-item"><img src="images/salvador1.jpg" alt="Nossa memória" loading="lazy" /></div>
+        <div class="gallery-item"><img src="images/salvador2.jpg" alt="Nossa memória" loading="lazy" /></div>
+        <div class="gallery-item"><img src="images/salvador6.jpg" alt="Nossa memória" loading="lazy" /></div>
+        <div class="gallery-item"><img src="images/salvador4.jpg" alt="Nossa memória" loading="lazy" /></div>
+        <div class="gallery-item"><img src="images/salvador5.jpg" alt="Nossa memória" loading="lazy" /></div>
+        <div class="gallery-item"><img src="images/salvador3.jpg" alt="Nossa memória" loading="lazy" /></div>
+      </div>
+      <p class="chapter-intro reveal" style="margin-top:2rem;">E cada um dos nossos momentos em que estivemos juntos.</p>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ===== CHAPTER 6 ===== -->
+    <section class="chapter" style="gap:2rem;">
+      <p class="chapter-intro reveal">E dos momentos em que eu não estive com você, mas mesmo assim participei.</p>
+      <p class="chapter-intro reveal">E foi assim que tivemos nossa primeira filha.</p>
+      <div class="video-frame reveal" style="position:relative;">
+        <div class="video-ambient"></div>
+        <video id="video2" src="videos/video2.mp4" controls preload="metadata" playsinline></video>
+      </div>
+      <div class="cacau-name" id="cacau">A Cacau.</div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ===== CHAPTER 7 ===== -->
+    <section class="chapter">
+      <div class="slow-text">
+        <p class="reveal">No fim, essa data serve pra me lembrar do quanto você é especial pra mim.</p>
+        <p class="reveal">E sempre que fecho os olhos, você aparece na minha mente.</p>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ===== FOTOS PERFEITAS ===== -->
+    <section class="chapter" style="gap:2rem;">
+      <div class="fotos-perfeitas" id="fotosPerfeitas">
+        <!-- REPLACE: coloque aqui as 4 fotos dela -->
+        <!-- images/perfeita1.jpg até perfeita4.jpg -->
+        <div class="foto-perfeita"><img src="images/perfeita1.jpg" alt="Foto perfeita 1" loading="lazy" /></div>
+        <div class="foto-perfeita"><img src="images/perfeita2.jpg" alt="Foto perfeita 2" loading="lazy" /></div>
+        <div class="foto-perfeita"><img src="images/perfeita3.jpg" alt="Foto perfeita 3" loading="lazy" /></div>
+        <div class="foto-perfeita"><img src="images/perfeita4.jpg" alt="Foto perfeita 4" loading="lazy" /></div>
+      </div>
+    </section>
+
+
+    </section>
+
+    <!-- ===== SIGNATURE ===== -->
+    <section id="signature">
+      <p class="sig-love" id="sig1">Te amo, meu amor.</p>
+      <p class="sig-line" id="sig2">Assinado,</p>
+      <p class="sig-name" id="sig3">Seu Maior Fã</p>
+    </section>
+
+  </main>
+
+  <script>
+    /* ========== PARTICLES ========== */
+    (function () {
+      const container = document.getElementById('particles');
+      for (let i = 0; i < 22; i++) {
+        const p = document.createElement('div');
+        p.classList.add('particle');
+        const size = Math.random() * 3 + 1;
+        p.style.cssText = `
+          width: ${size}px; height: ${size}px;
+          left: ${Math.random() * 100}%;
+          animation-duration: ${Math.random() * 12 + 10}s;
+          animation-delay: ${Math.random() * 12}s;
+        `;
+        container.appendChild(p);
+      }
+    })();
+
+    /* ========== INTRO ========== */
+    const intro = document.getElementById('intro');
+    const beginBtn = document.getElementById('begin-btn');
+
+    beginBtn.addEventListener('click', () => {
+      intro.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+    });
+
+    document.body.style.overflow = 'hidden';
+
+    /* ========== INTERSECTION OBSERVER ========== */
+    const observerOpts = { threshold: 0.18 };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, observerOpts);
+
+    document.querySelectorAll('.reveal, .memory-single, .scrapbook, .gallery, .cacau-name, .fotos-perfeitas').forEach(el => {
+      observer.observe(el);
+    });
+
+    /* Signature staggered reveal */
+    const sigObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const sig1 = document.getElementById('sig1');
+          const sig2 = document.getElementById('sig2');
+          const sig3 = document.getElementById('sig3');
+          sig1.classList.add('visible');
+          setTimeout(() => sig2.classList.add('visible'), 1400);
+          setTimeout(() => sig3.classList.add('visible'), 2800);
+          sigObserver.unobserve(entry.target);
+
+          /* Fade to black after signature */
+          setTimeout(() => {
+            document.getElementById('fade-out').classList.add('active');
+          }, 7000);
+        }
+      });
+    }, { threshold: 0.4 });
+
+    sigObserver.observe(document.getElementById('signature'));
+
+    /* ========== AUDIO PLAYER ========== */
+    const audio = document.getElementById('audio-el');
+    const playBtn = document.getElementById('play-btn');
+    const playIcon = document.getElementById('play-icon');
+    const progressBar = document.getElementById('progress-bar');
+    const timeDisplay = document.getElementById('time-display');
+
+    const playIconSVG  = `<polygon points="5,3 19,12 5,21"/>`;
+    const pauseIconSVG = `<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`;
+
+    function formatTime(s) {
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60).toString().padStart(2, '0');
+      return `${m}:${sec}`;
+    }
+
+    playBtn.addEventListener('click', () => {
+      if (audio.paused) {
+        audio.play().catch(() => {});
+        playIcon.innerHTML = pauseIconSVG;
+      } else {
+        audio.pause();
+        playIcon.innerHTML = playIconSVG;
+      }
+    });
+
+    audio.addEventListener('timeupdate', () => {
+      if (audio.duration) {
+        progressBar.value = (audio.currentTime / audio.duration) * 100;
+        timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+      }
+    });
+
+    audio.addEventListener('ended', () => {
+      playIcon.innerHTML = playIconSVG;
+      progressBar.value = 0;
+    });
+
+    progressBar.addEventListener('input', () => {
+      if (audio.duration) {
+        audio.currentTime = (progressBar.value / 100) * audio.duration;
+      }
+    });
+
+    audio.addEventListener('loadedmetadata', () => {
+      timeDisplay.textContent = `0:00 / ${formatTime(audio.duration)}`;
+    });
+  </script>
+</body>
+</html>
